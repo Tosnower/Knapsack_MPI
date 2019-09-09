@@ -3,20 +3,54 @@
 #include <mpi.h>
 #include <sys/time.h>
 
-void init_things(int n, int max, int weight[n], int profit[n])
-{
-    int i = 0;
-    
-    for (i = 0; i < n; i++)    {
-        int p,w;
-        scanf("%d, %d", &p, &w);
-        weight[i] = p;
-        profit[i] = w;
+
+long int knapSack(long int C, long int w[], long int v[], int n);
+
+
+uint64_t GetTimeStamp() {
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    return tv.tv_sec*(uint64_t)1000000+tv.tv_usec;
+}
+
+int main(int argc, char *argv[]) {
+    long int C;    /* capacity of backpack */
+    int n;    /* number of items */
+    int i;    /* loop counter */
+
+    MPI_Init (&argc, &argv);
+    int rank;
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);
+
+    if (rank == 0) {
+        scanf ("%ld", &C);
+        scanf ("%d", &n);
     }
+
+    long int v[n], w[n];        /* value, weight */
+
+    if (rank == 0) {
+        for (i = 0; i < n; i++) {
+            scanf ("%ld %ld", &v[i], &w[i]);
+        }
+    }
+
+
+    uint64_t start = GetTimeStamp ();
+    long int ks = knapSack(C, w, v, n);
+
+    if (rank == 0) {
+        printf ("knapsack occupancy %ld\n", ks);
+        printf ("Time: %ld us\n", (uint64_t) (GetTimeStamp() - start));
+    }
+
+    MPI_Finalize ();
+
+    return 0;
 }
 
 
-
+/* PLACE YOUR CHANGES BELOW HERE */
 //subblock size
 #define ROW 1
 #define COL 512
@@ -31,10 +65,10 @@ void solver(int n, int c, int rows, int weight[rows], int profit[rows],
     int recv_rank = (rank-1)%size;   //rank to receive data
     int send_rank = (rank+1)%size; // rank to send data
     if( start == 0 ) {      // deal with first block, since it doesn't receive data from any nodes
-        
+
         int total[rows][c];
         int i, j;
-        
+
         for (j = 0; j < c; j += COL) {
             int cols = min(COL, c-j);
             int k;
@@ -60,7 +94,7 @@ void solver(int n, int c, int rows, int weight[rows], int profit[rows],
             //send last row to next node
             MPI_Send(&total[rows-1][j], cols, MPI_INT, send_rank, j, MPI_COMM_WORLD);
         }
-        
+
     } else {
 //        printf("I run1");
         int total[rows+1][c];  // use the first row to store the data from last node
@@ -81,8 +115,8 @@ void solver(int n, int c, int rows, int weight[rows], int profit[rows],
                     }
                 }
             }
-            
-            
+
+
             if (start + rows == n && j + cols == c) {
                 //computer the last subblock of last ROW, print the final result
                 printf("max profit: %d \n", total[rows][c-1]);
@@ -96,82 +130,38 @@ void solver(int n, int c, int rows, int weight[rows], int profit[rows],
 
 
 
-int main(int argc, char *argv[]) {
-    
-    
-    int i, n = 0, c = 0, m = 50;
-    //    int *weights, *profits;
-    unsigned long long usec;
-    struct timeval tstart, tend;
-//    int (*table)[c], (*flags)[c];
-    
-//    if (argc > 2 && argc < 5) {
-//        n = atoi(argv[1]);        /* Number of things */
-//        c = atoi(argv[2]);        /* Capacity of knapsack */
-         /* value, weight */
-    int *v, *w;
-    int size, rank;
-    MPI_Init(NULL, NULL);
+long int knapSack(long int C, long int w[], long int v[], int n) {
+    int size, rank,i;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 0) {
-        scanf ("%d", &c);
-        scanf ("%d", &n);
-        v = (int*) malloc(sizeof(int) * n);
-        w = (int*) malloc(sizeof(int) * n);
-        for (i = 0; i < n; i++) {
-            scanf ("%d %d", &v[i], &w[i]);
-        }
         for (int k = 1; k < size; k++) {
             MPI_Send(&n, 1, MPI_INT, k, 0, MPI_COMM_WORLD);
-            MPI_Send(&c, 1, MPI_INT, k, 1, MPI_COMM_WORLD);
+            MPI_Send(&C, 1, MPI_INT, k, 1, MPI_COMM_WORLD);
             MPI_Send(v, n, MPI_INT, k, 2, MPI_COMM_WORLD);
             MPI_Send(w, n, MPI_INT, k, 3, MPI_COMM_WORLD);
         }
-        
+
     } else {
         MPI_Recv(&n, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&c, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&C, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         v = (int*) malloc(sizeof(int) * n);
         w = (int*) malloc(sizeof(int) * n);
         MPI_Recv(v, n, MPI_INT, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(w, n, MPI_INT, 0, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
-//    printf("c:%d\n",c);
-    gettimeofday(&tstart, NULL);
     for (i = 0; i < n; i += ROW) {
-        
         int rows  = min(ROW, n-i);
         int *weights = malloc(rows * sizeof(int));   //initial weights locally
         int *profits = malloc(rows * sizeof(int));   //initial weights locally
-//        init_things(rows, m, weights, profits);
-        for (int j = 0; j<rows; j++) {
+        for (int j = 0; j<rows; j++){
             weights[j] = w[i+j];
             profits[j] = v[i+j];
         }
-//        printf("i: %d",i);
         if ((i/ROW) % size == rank)
-            solver(n, c, rows, weights, profits, i, rank, size);  //solve subblock
+            solver(n, C, rows, weights, profits, i, rank, size);  //solve subblock
         free(weights);
         free(profits);
     }
-    //solver(n, c, weights, profits, table, flags);
-    gettimeofday(&tend, NULL);
-
-    if (tend.tv_usec > tstart.tv_usec) {
-        usec = (tend.tv_sec - tstart.tv_sec) * 1000000
-        + tend.tv_usec - tstart.tv_usec;
-    } else {
-        usec = (tend.tv_sec - (tstart.tv_sec + 1)) * 1000000
-        + (1000000 + tend.tv_usec - tstart.tv_usec);
-    }
-
-    if (rank == 0) {
-        fprintf(stdout,
-                "%d * %d in %d nodes Solver finished in %f seconds.\n", n, c, size, (double)usec/1000000.0);
-    }
-    
-    MPI_Finalize();
-    //print_table(n,c,table,flags);
 }

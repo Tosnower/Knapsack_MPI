@@ -1,11 +1,13 @@
-all:
-	mpicc knap_MPI.c -o Knap_MPI
-	cat test30.txt | mpirun -n 4 ./Knap_MPi
-de:
-	mpicc knap_MPI.c -o Knap_MPI
-	./generator 100 50 | mpirun -n 6 ./Knap_MPi
+pr:
+	mpicc knapsack_pruning_mpi.c -o knapsack_pruning_mpi
+	./generator 100 20 | mpirun -n 6 ./knapsack_pruning_mpi
 debug:
 	mpicc -DDEBUG knap_MPI.c -o Knap_MPI
-tmp:
-		mpicc tmp.c -o tmp
-		./generator 100 10 | mpirun -n 2 ./tmp
+dp:
+	mpicc knapsack_dp_mpi.c -o knapsack_dp_mpi
+	./generator 100 20 | mpirun -n 6 ./knapsack_dp_mpi
+compare:
+	mpicc knapsack_dp_mpi.c -o knapsack_dp_mpi
+	mpicc knapsack_pruning_mpi.c -o knapsack_pruning_mpi
+	./generator 100 20 | mpirun -n 6 ./knapsack_dp_mpi
+	./generator 100 20 | mpirun -n 6 ./knapsack_pruning_mpi
