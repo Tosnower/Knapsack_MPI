@@ -3,8 +3,7 @@
 #include <mpi.h>
 #include <sys/time.h>
 
-
-long int knapSack(long int C, long int w[], long int v[], int n);
+ int knapSack( long int C,  long int w[],  long int v[], int n);
 
 
 uint64_t GetTimeStamp() {
@@ -23,7 +22,7 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank (MPI_COMM_WORLD, &rank);
 
     if (rank == 0) {
-        scanf ("%ld", &C);
+        scanf ("%d", &C);
         scanf ("%d", &n);
     }
 
@@ -31,13 +30,13 @@ int main(int argc, char *argv[]) {
 
     if (rank == 0) {
         for (i = 0; i < n; i++) {
-            scanf ("%ld %ld", &v[i], &w[i]);
+            scanf ("%d %d", &v[i], &w[i]);
         }
     }
 
 
     uint64_t start = GetTimeStamp ();
-    long int ks = knapSack(C, w, v, n);
+    int ks = knapSack(C, w, v, n);
 
     if (rank == 0) {
         printf ("knapsack occupancy %ld\n", ks);
@@ -60,13 +59,13 @@ int min(int i, int j) {
 }
 
 
-void solver(int n, int c, int rows, int weight[rows], int profit[rows],
+long int solver(int n, long int c, int rows, int weight[rows], int profit[rows],
             int start, int rank, int size) {
     int recv_rank = (rank-1)%size;   //rank to receive data
     int send_rank = (rank+1)%size; // rank to send data
     if( start == 0 ) {      // deal with first block, since it doesn't receive data from any nodes
 
-        int total[rows][c];
+        long int total[rows][c];
         int i, j;
 
         for (j = 0; j < c; j += COL) {
@@ -92,18 +91,18 @@ void solver(int n, int c, int rows, int weight[rows], int profit[rows],
                 }
             }
             //send last row to next node
-            MPI_Send(&total[rows-1][j], cols, MPI_INT, send_rank, j, MPI_COMM_WORLD);
+            MPI_Send(&total[rows-1][j], cols, MPI_LONG, send_rank, j, MPI_COMM_WORLD);
         }
 
     } else {
 //        printf("I run1");
-        int total[rows+1][c];  // use the first row to store the data from last node
+        long int total[rows+1][c];  // use the first row to store the data from last node
         int i, j;
         for (j = 0; j < c; j += COL) {
             int cols = min(COL, c-j);
             int k;
             // receive data from last node
-            MPI_Recv(&total[0][j], cols, MPI_INT, recv_rank, j, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&total[0][j], cols, MPI_LONG, recv_rank, j, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             for (i = 1; i <= rows; i++) {
                 for (k = j; k < j + cols; k++) {
                     int ni = i-1;  //ni is index for weight and profit, notice the first row is the data from last node
@@ -120,9 +119,10 @@ void solver(int n, int c, int rows, int weight[rows], int profit[rows],
             if (start + rows == n && j + cols == c) {
                 //computer the last subblock of last ROW, print the final result
                 printf("max profit: %d \n", total[rows][c-1]);
+                return total[rows][c-1];
             } else if (start + rows != n){
                 // if it is not last ROW, we need send data to next node.
-                MPI_Send(&total[rows][j], cols, MPI_INT, send_rank, j, MPI_COMM_WORLD);
+                MPI_Send(&total[rows][j], cols, MPI_LONG, send_rank, j, MPI_COMM_WORLD);
             }
         }
     }
@@ -130,25 +130,25 @@ void solver(int n, int c, int rows, int weight[rows], int profit[rows],
 
 
 
-long int knapSack(long int C, long int w[], long int v[], int n) {
+ int knapSack(long int C,  long int w[], long int v[], int n) {
     int size, rank,i;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 0) {
         for (int k = 1; k < size; k++) {
             MPI_Send(&n, 1, MPI_INT, k, 0, MPI_COMM_WORLD);
-            MPI_Send(&C, 1, MPI_INT, k, 1, MPI_COMM_WORLD);
-            MPI_Send(v, n, MPI_INT, k, 2, MPI_COMM_WORLD);
-            MPI_Send(w, n, MPI_INT, k, 3, MPI_COMM_WORLD);
+            MPI_Send(&C, 1, MPI_LONG, k, 1, MPI_COMM_WORLD);
+            MPI_Send(v, n, MPI_LONG, k, 2, MPI_COMM_WORLD);
+            MPI_Send(w, n, MPI_LONG, k, 3, MPI_COMM_WORLD);
         }
 
     } else {
         MPI_Recv(&n, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&C, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        v = (int*) malloc(sizeof(int) * n);
-        w = (int*) malloc(sizeof(int) * n);
-        MPI_Recv(v, n, MPI_INT, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(w, n, MPI_INT, 0, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&C, 1, MPI_LONG, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        v = (int*) malloc(sizeof(long int) * n);
+        w = (int*) malloc(sizeof(long int) * n);
+        MPI_Recv(v, n, MPI_LONG, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(w, n, MPI_LONG, 0, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
     for (i = 0; i < n; i += ROW) {
