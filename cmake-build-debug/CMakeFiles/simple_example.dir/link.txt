@@ -1,0 +1,1 @@
+mpicc -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/simple_example.dir/knap_MPI.c.o  -o simple_example /usr/local/Cellar/open-mpi/4.0.1_2/lib/libmpi.dylib 
