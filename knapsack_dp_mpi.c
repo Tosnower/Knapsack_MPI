@@ -3,7 +3,7 @@
 #include <mpi.h>
 #include <sys/time.h>
 
- int knapSack( long int C,  long int w[],  long int v[], int n);
+long int knapSack( long int C,  long int w[],  long int v[], int n);
 
 
 uint64_t GetTimeStamp() {
@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank (MPI_COMM_WORLD, &rank);
 
     if (rank == 0) {
-        scanf ("%d", &C);
+        scanf ("%ld", &C);
         scanf ("%d", &n);
     }
 
@@ -30,13 +30,13 @@ int main(int argc, char *argv[]) {
 
     if (rank == 0) {
         for (i = 0; i < n; i++) {
-            scanf ("%d %d", &v[i], &w[i]);
+            scanf ("%ld %ld", &v[i], &w[i]);
         }
     }
 
 
     uint64_t start = GetTimeStamp ();
-    int ks = knapSack(C, w, v, n);
+    long int ks = knapSack(C, w, v, n);
 
     if (rank == 0) {
         printf ("knapsack occupancy %ld\n", ks);
@@ -59,7 +59,7 @@ int min(int i, int j) {
 }
 
 
-long int solver(int n, long int c, int rows, int weight[rows], int profit[rows],
+void solver(int n, long int c, int rows, long int weight[rows], long int profit[rows],
             int start, int rank, int size) {
     int recv_rank = (rank-1)%size;   //rank to receive data
     int send_rank = (rank+1)%size; // rank to send data
@@ -118,8 +118,8 @@ long int solver(int n, long int c, int rows, int weight[rows], int profit[rows],
 
             if (start + rows == n && j + cols == c) {
                 //computer the last subblock of last ROW, print the final result
-                printf("max profit: %d \n", total[rows][c-1]);
-                return total[rows][c-1];
+                printf("max profit: %ld \n", total[rows][c-1]);
+                //return total[rows][c-1];
             } else if (start + rows != n){
                 // if it is not last ROW, we need send data to next node.
                 MPI_Send(&total[rows][j], cols, MPI_LONG, send_rank, j, MPI_COMM_WORLD);
@@ -130,7 +130,7 @@ long int solver(int n, long int c, int rows, int weight[rows], int profit[rows],
 
 
 
- int knapSack(long int C,  long int w[], long int v[], int n) {
+ long int knapSack(long int C,  long int w[], long int v[], int n) {
     int size, rank,i;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -145,16 +145,16 @@ long int solver(int n, long int c, int rows, int weight[rows], int profit[rows],
     } else {
         MPI_Recv(&n, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(&C, 1, MPI_LONG, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        v = (int*) malloc(sizeof(long int) * n);
-        w = (int*) malloc(sizeof(long int) * n);
+        v = (long int*) malloc(sizeof(long int) * n);
+        w = (long int*) malloc(sizeof(long int) * n);
         MPI_Recv(v, n, MPI_LONG, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(w, n, MPI_LONG, 0, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
     for (i = 0; i < n; i += ROW) {
         int rows  = min(ROW, n-i);
-        int *weights = malloc(rows * sizeof(int));   //initial weights locally
-        int *profits = malloc(rows * sizeof(int));   //initial weights locally
+        long int *weights = malloc(rows * sizeof(long int));   //initial weights locally
+        long int *profits = malloc(rows * sizeof(long int));   //initial weights locally
         for (int j = 0; j<rows; j++){
             weights[j] = w[i+j];
             profits[j] = v[i+j];
@@ -164,4 +164,5 @@ long int solver(int n, long int c, int rows, int weight[rows], int profit[rows],
         free(weights);
         free(profits);
     }
+    return 0; //防止无返回warning
 }
