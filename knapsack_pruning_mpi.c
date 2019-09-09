@@ -194,15 +194,12 @@ int compar(const void *a, const void*b){
 long int knapSack(long int C, long int w[], long int v[], int n){
   int i;
   int myrank, size, len;
-  //char processor[100];
 
   // 得到当前进程的 rank 以及整个 communicator 的大小
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-  //MPI_Get_processor_name(processor, &len);
   int nProc = size;
   DBG("Hello I am processor no. %d out of %d processors\n", myrank, size);
-  //MPI TYPE
   int count = 2;
   int array_of_blocklengths[] = { 1, 1 };
   MPI_Aint array_of_displacements[] = { offsetof( pair_t, value),
@@ -220,7 +217,6 @@ long int knapSack(long int C, long int w[], long int v[], int n){
 
   if (myrank == 0){ //master code
       bag_size = C;
-      printf("n is %d bag_size is %d\n",n,bag_size );
       inp = (pair_t*)malloc(n*sizeof(pair_t));
       for (i=0;i<n;i++)
       {
