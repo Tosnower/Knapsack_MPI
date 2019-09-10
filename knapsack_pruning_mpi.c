@@ -249,7 +249,13 @@ long int knapSack(long int C, long int w[], long int v[], int n){
           bestSolVal += inp[i].value;
           bestSol[i] = 1;
       } //贪婪的加满
-      if (total_weight > bag_size){ bestSol[i-1] = 0; bestSolVal -= inp[i-1].value;}
+      if (total_weight > bag_size){
+          bestSol[i-1] = 0;
+          bestSolVal -= inp[i-1].value;
+          
+      } else if(total == bag_size) {
+          return bestSolVal;
+      }
       bestSol[n] = bestSolVal; //存放到bestSol最后一个值
       tempSol[n] = bestSolVal;
       MPI_Send(tempSol, n+1, MPI_INT, dst, PBM_TAG, MPI_COMM_WORLD); //发送下一个空闲的线程
