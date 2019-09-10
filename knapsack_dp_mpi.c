@@ -95,7 +95,6 @@ void solver(int n, long int c, int rows, long int weight[rows], long int profit[
         }
 
     } else {
-//        printf("I run1");
         long int total[rows+1][c];  // use the first row to store the data from last node
         int i, j;
         for (j = 0; j < c; j += COL) {
@@ -115,11 +114,10 @@ void solver(int n, long int c, int rows, long int weight[rows], long int profit[
                 }
             }
 
-
             if (start + rows == n && j + cols == c) {
                 //computer the last subblock of last ROW, print the final result
-                printf("max profit: %ld \n", total[rows][c-1]);
-                //return total[rows][c-1];
+                //printf("max profit: %ld \n", total[rows][c-1]);
+                MPI_Send(&total[rows][c-1], 1, MPI_LONG, 0, 0, MPI_COMM_WORLD);
             } else if (start + rows != n){
                 // if it is not last ROW, we need send data to next node.
                 MPI_Send(&total[rows][j], cols, MPI_LONG, send_rank, j, MPI_COMM_WORLD);
@@ -163,6 +161,18 @@ void solver(int n, long int c, int rows, long int weight[rows], long int profit[
             solver(n, C, rows, weights, profits, i, rank, size);  //solve subblock
         free(weights);
         free(profits);
+    }
+    long res=0;
+    if(rank==0){
+      MPI_Status status;
+      int tag;
+      MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+      tag = status.MPI_TAG;
+      int src = status.MPI_SOURCE;
+      if (tag == 0) { //receive best solution value and best solution
+          MPI_Recv(&res, n+1, MPI_LONG, src, tag, MPI_COMM_WORLD, &status);
+          return res;
+      }
     }
     return 0; //防止无返回warning
 }

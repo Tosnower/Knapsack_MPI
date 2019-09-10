@@ -6,8 +6,13 @@ debug:
 dp:
 	mpicc knapsack_dp_mpi.c -o knapsack_dp_mpi
 	./generator 100 20 | mpirun -n 6 ./knapsack_dp_mpi
-compare:
+com:
 	mpicc knapsack_dp_mpi.c -o knapsack_dp_mpi
 	mpicc knapsack_pruning_mpi.c -o knapsack_pruning_mpi
-	./generator 100 20 | mpirun -n 6 ./knapsack_dp_mpi
-	./generator 100 20 | mpirun -n 6 ./knapsack_pruning_mpi
+	./generator 1000 200 | mpirun -n 6 ./knapsack_dp_mpi
+	./generator 1000 200 | mpirun -n 6 ./knapsack_pruning_mpi
+comf:
+		mpicc knapsack_dp_mpi.c -o knapsack_dp_mpi
+		mpicc knapsack_pruning_mpi.c -o knapsack_pruning_mpi
+		cat test30.txt | mpirun -n 6 ./knapsack_dp_mpi
+		cat test30.txt | mpirun -n 6 ./knapsack_pruning_mpi
