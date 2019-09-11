@@ -253,7 +253,7 @@ long int knapSack(long int C, long int w[], long int v[], int n){
           bestSol[i-1] = 0;
           bestSolVal -= inp[i-1].value;
           
-      } else if(total == bag_size) {
+      } else if(total_weight == bag_size) {
           return bestSolVal;
       }
       bestSol[n] = bestSolVal; //存放到bestSol最后一个值
