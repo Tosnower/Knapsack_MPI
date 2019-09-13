@@ -184,7 +184,8 @@ int compar(const void *a, const void*b){
 
 long int knapSack(long int C, long int w[], long int v[], int n)
 {
-  int myrank, size,i,res;
+  int myrank, size,i;
+  long int res;
   // 得到当前进程的 rank 以及整个 communicator 的大小
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
@@ -216,9 +217,9 @@ long int knapSack(long int C, long int w[], long int v[], int n)
       int *tempvisited = (int*)malloc(sizeof(int)*(n+1));
       for (i=0;i<n;i++) tempvisited[i] = visited[i] = -1; //初始值为-1
       qsort(inp, n, sizeof(pair_t), compar); //平均价值高的排序
-      int pair[2];
+      long int pair[2];
       pair[0] = n; pair[1] = C;
-      MPI_Bcast(pair, 2, MPI_INT, 0, MPI_COMM_WORLD);
+      MPI_Bcast(pair, 2, MPI_LONG, 0, MPI_COMM_WORLD);
       MPI_Bcast(inp, n, MPI_PAIR, 0, MPI_COMM_WORLD);
       DBG("Master : Input sent to all other processes\n");
       int idle = size - 1;
@@ -296,9 +297,9 @@ long int knapSack(long int C, long int w[], long int v[], int n)
   else {  //slave code  //子线程循环
       //pair_t * inp;
       //int n, bag_size;
-      int pair[2];
+      long int pair[2];
       MPI_Status status;
-      MPI_Bcast(pair, 2, MPI_INT, 0, MPI_COMM_WORLD);
+      MPI_Bcast(pair, 2, MPI_LONG, 0, MPI_COMM_WORLD);
       //MPI_Recv(pair, 2, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
       n = pair[0]; C = pair[1];
       inp = (pair_t*)malloc(n*sizeof(pair_t));
