@@ -87,7 +87,6 @@ int * remove_from_list(list_t *list){
     list->head = temp->next;
     list->len -= 1;
     int *arr = temp->arr;
-    ;
     return arr;
 }
 
@@ -97,8 +96,8 @@ int empty_list(list_t * list){
 }
 
 
-
 typedef enum { END_TAG, PBM_TAG, SOLVE_TAG, IDLE_TAG, BnB_TAG, DONE} tag_t;
+
 typedef struct pair_t{
     int value;
     int weight;
@@ -206,7 +205,7 @@ long int knapSack(long int C, long int w[], long int v[], int n){
       offsetof(pair_t, weight)};
   MPI_Datatype array_of_types[] = { MPI_INT, MPI_INT };
   MPI_Datatype tmp_type, MPI_PAIR;
-  MPI_Aint lb, extent;
+  MPI_Aint lb, extent; // C type that holds any valid address
   MPI_Type_create_struct( count, array_of_blocklengths, array_of_displacements,
                           array_of_types, &tmp_type );
   MPI_Type_get_extent( tmp_type, &lb, &extent );
@@ -231,10 +230,12 @@ long int knapSack(long int C, long int w[], long int v[], int n){
       qsort(inp, n, sizeof(pair_t), compar); //平均价值高的排序
       int pair[2];
       pair[0] = n; pair[1] = bag_size;
-      for (i=1;i<nProc;i++){ //nProc为进程的数量， 为向每个进程发送一下信息
-          MPI_Send(pair, 2, MPI_INT, i, 1, MPI_COMM_WORLD); //发送了C的大小和Item的数量
-          MPI_Send(inp, n, MPI_PAIR, i, 2, MPI_COMM_WORLD); //发送商品的价值
-      }
+      //for (i=1;i<nProc;i++){ //nProc为进程的数量， 为向每个进程发送一下信息
+          //MPI_Send(pair, 2, MPI_INT, i, 1, MPI_COMM_WORLD); //发送了C的大小和Item的数量
+          MPI_Bcast(pair, 2, MPI_INT, 0, MPI_COMM_WORLD);
+          MPI_Bcast(inp, n, MPI_PAIR, 0, MPI_COMM_WORLD);
+          //MPI_Send(inp, n, MPI_PAIR, i, 2, MPI_COMM_WORLD); //发送商品的价值
+      //}
       DBG("Master : Input sent to all other processes\n");
       int idle = nProc - 1;
       tag_t tag;
@@ -319,10 +320,12 @@ long int knapSack(long int C, long int w[], long int v[], int n){
       //int n, bag_size;
       int pair[2];
       MPI_Status status;
-      MPI_Recv(pair, 2, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+      MPI_Bcast(pair, 2, MPI_INT, 0, MPI_COMM_WORLD);
+      //MPI_Recv(pair, 2, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
       n = pair[0]; bag_size = pair[1];
       inp = (pair_t*)malloc(n*sizeof(pair_t));
-      MPI_Recv(inp, n, MPI_PAIR, 0, 2, MPI_COMM_WORLD, &status);  //接收到数据
+      MPI_Bcast(inp, n, MPI_PAIR, 0, MPI_COMM_WORLD);
+      //MPI_Recv(inp, n, MPI_PAIR, 0, 2, MPI_COMM_WORLD, &status);  //接收到数据
       DBG("Processor %d : Received input from master\n", myrank);
       list_t list;
       list.head = NULL; list.len = 0;
