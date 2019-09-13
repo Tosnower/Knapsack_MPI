@@ -56,133 +56,121 @@ int main(int argc, char *argv[]) {
 #define true 1
 #define false 0
 
+typedef enum { END, STARTJOB, FINDBETTER, FREEPRO, SENDJOB, DONE} flag;
+
 typedef struct node{
-    long int *arr; //length n always
+    long int *curnode;
     struct node * next;
 } node;
-
 typedef struct list_node {
     node * head;
     int length;
 } list_node;
 
-void insert_into_list(list_node * list,long int *arr, int n){
-    node * x = (node*) malloc(sizeof(node));
-    x->arr = arr;
-    x->next = list->head;
-    list->head = x;
-    list->length += 1;
+int hasnode(list_node * list){
+    return list->length;
 }
-
-long int * remove_from_list(list_node *list){
+void append(list_node * list,long int *curnode, int n){
+    node * newenode = (node*) malloc(sizeof(node));
+    newenode->curnode = curnode;
+    newenode->next = list->head;
+    list->head = newenode;
+    list->length++;
+}
+long int * pop(list_node *list){
     if (list->length == 0) return NULL;
     node * temp = list->head;
     list->head = temp->next;
-    list->length -= 1;
-    long int *arr = temp->arr;
-    return arr;
+    list->length--;
+    return temp->curnode;
 }
-
-int empty_list(list_node * list){
-    if (list->length == 0) return 1;
-    return 0;
-}
-
-typedef enum { END_TAG, PBM_TAG, SOLVE_TAG, IDLE_TAG, BnB_TAG, DONE} flag;
 
 typedef struct item{
     long int value;
     long int weight;
 } item;
 
-item * inp;
-int n;
 
-int nextIdle(int *busy, int n, int* idle){
+
+int findnextfreeprocess(int *working, int n, int* idle){
     int i;
     for (i = 0; i < n; i++){
-        if (!busy[i]) {*idle = *idle - 1; busy[i] = true;return i;}
+        if (!working[i])
+        {*idle = *idle - 1;
+        working[i] = true;
+        return i;
+        }
     }
     return -1;
 }
 
-void branch(long int *arr, int n, list_node * list){
-    int upto;
+void breadennew(list_node * list,long int *curnode, int n ){
     int i = 0;
-    while (i<n && arr[i]!=-1)
-        i++;
-    upto = i;
+    while (i<n && curnode[i]!=-1) i++;
     if (i != n){
-        long int *arr1, *arr2;
-        arr1 = (long int*)malloc(((n+1)*sizeof(long int)));
-        for (i=0;i<n+1;i++)
-            arr1[i] = arr[i];
-        arr2 = arr;
-        arr1[upto] = 0;
-        arr2[upto] = 1;
-        insert_into_list(list, arr1, n+1);
-        insert_into_list(list, arr2, n+1);
+        long int* newnode = (long int*)malloc(((n+1)*sizeof(long int)));
+        for (int j=0;j<n+1;j++)
+            newnode[j] = curnode[j];
+        curnode[i]=1;
+        newnode[i]=0;
+        append(list, newnode, n+1);
+        append(list, curnode, n+1);
     }
 }
 
-long int findmax(long int *productlist, int n,long int C){ //n为商品的数量
-    long int i=0,total_val=0,weight_used = 0;
+
+long int findmax(long int *productlist,item *items,long int C,int n){ //n为商品的数量
+    long int i=0,total_val=0,occupied = 0;
     for (; i<n && productlist[i]!=-1; i++){
         if (productlist[i] == 1){
-            total_val += inp[i].value;
-            weight_used += inp[i].weight;
+            total_val += items[i].value;
+            occupied += items[i].weight;
         }
     }
-    if (weight_used>C) return -1;
-    long int left = C - weight_used;
-    for (; i<n && weight_used<=C; i++){  //多装进去一个
-        total_val += inp[i].value;
-        weight_used += inp[i].weight;
+    if (occupied>C) return -1;
+    long int left = C - occupied;
+    for (; i<n && occupied<=C; i++){  //多装进去一个
+        total_val += items[i].value;
+        occupied += items[i].weight;
     }
     return total_val;
 }
 
-long int findmin(long int *productlist, int n, long int C){  //得到理想的小的
-    long int i=0,total_val=0,weight_used = 0;
+long int findmin(long int *productlist,item *items,long int C,int n){  //得到理想的小的
+    long int i=0,minvalue=0,occupied = 0;
     for (; i<n && productlist[i]!=-1; i++){
         if (productlist[i] == 1){
-            total_val += inp[i].value;
-            weight_used += inp[i].weight;
+            minvalue += items[i].value;
+            occupied += items[i].weight;
         }
     }
-    for (; i<n && weight_used<=C; i++){
-        total_val += inp[i].value;
-        weight_used += inp[i].weight;
+    for (; i<n && occupied<=C; i++){
+        minvalue += items[i].value;
+        occupied += items[i].weight;
     }
-    if (weight_used > C){
-        total_val -= inp[i-1].value;
+    if (occupied > C){
+        minvalue -= items[i-1].value;
     }
-    return total_val;
+    return minvalue;
 }
 
-int compar(const void *a, const void*b){
-    item * a1 = (item*)a;
-    item * b1 = (item*)b;
-    double r1, r2;
-    r1 = (double)a1->value/a1->weight;
-    r2 = (double)b1->value/b1->weight;
-    int res;
-    if (r1>r2) res = 1;
-    else res = -1;
-    return -res;
+int comitemaveval(const void *itema, const void*itemb){
+    item* item1 = (item*)itema,*item2 = (item*)itemb;
+    double avval1=(double)item1->value/item1->weight,avval2=(double)item2->value/item2->weight;
+    return avval1>avval2?-1:1;
 }
-
 
 long int knapSack(long int C, long int w[], long int v[], int n)
 {
-  int myrank, size,i;
+  int myrank, size,i,root=0;
   long int res;
+  item *items;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
   int lengthofitemvalue[] = { 1, 1 };
   MPI_Aint itemoffest[] = { offsetof( item, value),
       offsetof(item, weight)};
-  MPI_Datatype array_of_types[] = { MPI_LONG, MPI_LONG };
+  MPI_Datatype array_of_types[] = {MPI_LONG, MPI_LONG};
   MPI_Datatype tmp, MPI_ITEM;
   MPI_Type_create_struct( 2, lengthofitemvalue, itemoffest,array_of_types, &tmp );
   MPI_Aint lb, extent;
@@ -191,144 +179,144 @@ long int knapSack(long int C, long int w[], long int v[], int n)
   MPI_Type_commit( &MPI_ITEM );
 
   if (myrank == 0){
-      inp = (item*)malloc(n*sizeof(item));
+      items = (item*)malloc(n*sizeof(item));
       for (i=0;i<n;i++)
       {
-          inp[i].value=v[i];
-          inp[i].weight=w[i];
+          items[i].value=v[i];
+          items[i].weight=w[i];
       }
       long int *visited = (long int*) malloc(sizeof(long int)*(n+1));
       long int *tempvisited = (long int*)malloc(sizeof(long int)*(n+1));
       for (i=0;i<n;i++) tempvisited[i] = visited[i] = -1; //初始值为-1
-      qsort(inp, n, sizeof(item), compar); //平均价值高的排序
-      long int pair[2];
-      pair[0] = n; pair[1] = C;
-      MPI_Bcast(pair, 2, MPI_LONG, 0, MPI_COMM_WORLD);
-      MPI_Bcast(inp, n, MPI_ITEM, 0, MPI_COMM_WORLD);
-      int idle = size - 1;
-      flag curflag;
-      int *busy = (int*)malloc(size*sizeof(int));
-      for (i=1;i<size;i++)
-          busy[i] = false;
-      busy[0] = true;   //主线程是BUSY
-      int dst = nextIdle(busy, size, &idle);
+      qsort(items, n, sizeof(item), comitemaveval); //平均价值高的排序
       long int currentweight = 0;
       for (i=0;i<n && currentweight<=C;i++){
-          currentweight += inp[i].weight;
-          res += inp[i].value;
+          currentweight += items[i].weight;
+          res += items[i].value;
           visited[i] = 1;
       } //贪婪的加满
       if (currentweight > C){
           visited[i-1] = 0;
-          res -= inp[i-1].value;
+          res -= items[i-1].value;
       } else if(currentweight == C) {
           return res;
       }
-      visited[n] = res; //存放到bestSol最后一个值
+      long int pair[2];
+      pair[0] = n; pair[1] = C;
+      MPI_Bcast(pair, 2, MPI_LONG, root, MPI_COMM_WORLD);
+      MPI_Bcast(items, n, MPI_ITEM, root, MPI_COMM_WORLD);
+      int idle = size - 1;
+      flag curflag;
+      visited[n] = res;
       tempvisited[n] = res;
-      MPI_Send(tempvisited, n+1, MPI_LONG, dst, PBM_TAG, MPI_COMM_WORLD); //发送下一个空闲的线程
-      while (idle != size-1){ //直到idle为最后一个线程符号index时
+      int *working = (int*)malloc(size*sizeof(int));
+      for (i=1;i<size;i++)
+          working[i] = false;
+      working[0] = true;
+      int dst = findnextfreeprocess(working, size, &idle);
+      MPI_Send(tempvisited, n+1, MPI_LONG, dst, STARTJOB, MPI_COMM_WORLD); //发送下一个空闲的线程
+      while (idle != size-1){
           MPI_Status status;
           MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);//接受其他线程发送的信息
           curflag = status.MPI_TAG;
           int comfrom = status.MPI_SOURCE;
-          if (curflag == SOLVE_TAG) {
-              MPI_Recv(tempvisited, n+1, MPI_LONG, comfrom, curflag, MPI_COMM_WORLD, &status);
-              if (tempvisited[n] >= visited[n]){
-                  for (i=0;i<n+1;i++)
-                      visited[i] = tempvisited[i]; //把temp里面的副给全局里面
-                  res = visited[n];
-              }
-          }
-          if (curflag == IDLE_TAG) {
-              MPI_Recv(&curflag, 1, MPI_INT, comfrom, curflag, MPI_COMM_WORLD,  &status);
-              idle++;
-              busy[status.MPI_SOURCE] = 0;
-          }
-          if (curflag == BnB_TAG) {
-              long int data[2];
-              MPI_Recv(data, 2, MPI_LONG, comfrom, curflag, MPI_COMM_WORLD, &status);
-              long int high = data[0], nSlaves = data[1]; //获取上限 和 list的长度
-              if (high > res) {
-                  int total= ((nSlaves <= idle)?nSlaves:idle);
-                  long int *data = (long int*)malloc((total+1)*sizeof(long int)); //data[total] contains bestSolval
-                  data[total] = res;
-                  for (i=0;i<total;i++){
-                      data[i] = nextIdle(busy, size, &idle);
+          switch(curflag)
+          {
+              case FINDBETTER: {
+                  MPI_Recv(tempvisited, n + 1, MPI_LONG, comfrom, curflag, MPI_COMM_WORLD, &status);
+                  if (tempvisited[n] >= visited[n]) {
+                      for (i = 0; i < n + 1; i++)
+                          visited[i] = tempvisited[i];
+                      res = visited[n];
                   }
-                  MPI_Send(data, total+1, MPI_LONG, comfrom, BnB_TAG, MPI_COMM_WORLD);
+                  break;
               }
-              else{
-                  curflag = DONE;
-                  MPI_Send(&curflag, 1, MPI_INT, comfrom, DONE, MPI_COMM_WORLD);
+              case FREEPRO:{
+                  MPI_Recv(&curflag, 1, MPI_INT, comfrom, curflag, MPI_COMM_WORLD,  &status);
+                  idle++;
+                  working[status.MPI_SOURCE] = false;
+                  break;
+              }
+              case SENDJOB:{
+                  long int data[2];
+                  MPI_Recv(data, 2, MPI_LONG, comfrom, curflag, MPI_COMM_WORLD, &status);
+                  long int high = data[0], nSlaves = data[1]; //获取上限 和 list的长度
+                  if (high > res) {
+                      int total= ((nSlaves <= idle)?nSlaves:idle);
+                      long int *data = (long int*)malloc((total+1)*sizeof(long int));
+                      data[total] = res;
+                      for (i=0;i<total;i++){
+                          data[i] = findnextfreeprocess(working, size, &idle);
+                      }
+                      MPI_Send(data, total+1, MPI_LONG, comfrom, SENDJOB, MPI_COMM_WORLD);
+                  }
+                  else{
+                      MPI_Send(&curflag, 1, MPI_INT, comfrom, DONE, MPI_COMM_WORLD);
+                  }
               }
           }
       }
       for (i=1;i<size;i++){ //给所有线程发送终止信息
-          curflag = END_TAG;
-          MPI_Bsend(&curflag, 1, MPI_INT, i, END_TAG, MPI_COMM_WORLD);
+          MPI_Bsend(&curflag, 1, MPI_INT, i, END, MPI_COMM_WORLD);
       }
       return res;
-
   }
-  else {   //子线程循环
+  else {
       long int pair[2];
-      MPI_Status status;
       MPI_Bcast(pair, 2, MPI_LONG, 0, MPI_COMM_WORLD);
       n = pair[0]; C = pair[1];
-      inp = (item*)malloc(n*sizeof(item));
-      MPI_Bcast(inp, n, MPI_ITEM, 0, MPI_COMM_WORLD);
-      list_node list;
-      list.head = NULL; list.length = 0;
-      while (1){
+      items = (item*)malloc(n*sizeof(item));
+      MPI_Bcast(items, n, MPI_ITEM, 0, MPI_COMM_WORLD);
+      list_node list={NULL,0};
+      MPI_Status status;
+      flag curflag=true;
+      int comfrom;
+      long int *resfromothers=NULL,*currresult=NULL,high;
+      while (curflag){
           MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-          flag curflag = status.MPI_TAG;
-          int comfrom = status.MPI_SOURCE;
-          if (curflag == END_TAG){  //接受终止信息
-              return 0;
-          }
-          if (curflag == PBM_TAG) {  //为主线程第一次发送的数据 为next里的 将其置为busy了
-              long int *axSol = (long int*)malloc(sizeof(long int)*(n+1));  //axSol[n] contains bestSol 这个结果来自0号进程的计算
-              MPI_Recv(axSol, n+1, MPI_LONG, comfrom, curflag, MPI_COMM_WORLD, &status);//axsol为tempSol
-              res = axSol[n]; //得 到了0号进程的结果
-              insert_into_list(&list, axSol, n+1); //是个链表来保存中间的结果
-              while (!empty_list(&list)){ //当list为不空时
-                  long int *auxSp = remove_from_list(&list);
-                  long int high = findmax(auxSp, n,C);
+          curflag = status.MPI_TAG;
+          if (STARTJOB ==curflag) {
+              comfrom= status.MPI_SOURCE;
+              resfromothers = (long int*)malloc(sizeof(long int)*(n+1));  //axSol[n] contains bestSol 这个结果来自0号进程的计算
+              MPI_Recv(resfromothers, n+1, MPI_LONG, comfrom, curflag, MPI_COMM_WORLD, &status);//axsol为tempSol
+              res = resfromothers[n]; //得 到了0号进程的结果
+              append(&list, resfromothers, n+1); //是个链表来保存中间的结果
+              while (hasnode(&list)){ //当list为不空时
+                  currresult = pop(&list);
+                  high = findmax(currresult,items, C,n);
                   if (high >= res){
-                      long int low = findmin(auxSp, n, C);
+                      long int low = findmin(currresult,items, C, n);
                       if (low >= res)  { //结果更好时才返回
-                          auxSp[n] = low;
+                          currresult[n] = low;
                           res = low;
-                          MPI_Send(auxSp, n+1, MPI_LONG, 0, SOLVE_TAG, MPI_COMM_WORLD); //problem
+                          MPI_Send(currresult, n+1, MPI_LONG, root, FINDBETTER, MPI_COMM_WORLD); //problem
                           //发回0线程
                       }
-                      if (low != high){ //problem is here 如果两个不相等
+                      if (low != high){ //如果两个不相等
                           long int data[2];
                           data[0] = high;
                           data[1] = list.length;
-                          MPI_Send(data, 2, MPI_LONG, 0, BnB_TAG, MPI_COMM_WORLD);////发回0线程
-                          long int *assigned = (long int*) malloc((list.length+1)*sizeof(long int));
-                          MPI_Recv(assigned, list.length+1, MPI_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-                          if (status.MPI_TAG == BnB_TAG){
-                              int total;
-                              MPI_Get_count(&status, MPI_LONG, &total);
-                              res = assigned[total-1]; total--;
-                              branch(auxSp, n, &list);
-                              for (i=0;i<total;i++){
-                                  long int *sp = remove_from_list(&list);
+                          MPI_Send(data, 2, MPI_LONG, root, SENDJOB, MPI_COMM_WORLD);//发回0线程
+                          long int *givenewjob = (long int*) malloc((list.length+1)*sizeof(long int));
+                          MPI_Recv(givenewjob, list.length+1, MPI_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+                          if (SENDJOB == status.MPI_TAG){
+                              int len;
+                              MPI_Get_count(&status, MPI_LONG, &len);
+                              res = givenewjob[(len--)-1];
+                              breadennew( &list,currresult,n);
+                              for (i=0;i<len;i++){
+                                  long int *sp = pop(&list);
                                   sp[n] = res;
-                                  MPI_Send(sp, n+1, MPI_LONG, assigned[i], PBM_TAG, MPI_COMM_WORLD);
+                                  MPI_Send(sp, n+1, MPI_LONG, givenewjob[i], STARTJOB, MPI_COMM_WORLD);
                               }
                           }
-                          free(assigned);
+                          free(givenewjob);
                       }
                   }
               }
-              curflag = IDLE_TAG;
-              MPI_Send(&curflag, 1, MPI_INT, 0, IDLE_TAG, MPI_COMM_WORLD);
+              MPI_Send(&curflag, 1, MPI_INT, 0, FREEPRO, MPI_COMM_WORLD);
           }
       }
   }
-  return 0;
+  return -1;
 }
