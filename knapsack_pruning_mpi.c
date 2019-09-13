@@ -163,7 +163,7 @@ int comitemaveval(const void *itema, const void*itemb){
 long int knapSack(long int C, long int w[], long int v[], int n)
 {
   int myrank, size,i,root=0;
-  long int res;
+  long int res=0;
   item *items;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
