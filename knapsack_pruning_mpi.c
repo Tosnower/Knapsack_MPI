@@ -28,13 +28,19 @@ int main(int argc, char *argv[]) {
         scanf ("%d", &n);
     }
 
+    MPI_Bcast(&C, 1,MPI_LONG,0,MPI_COMM_WORLD);
+    MPI_Bcast(&n, 1,MPI_INT,0,MPI_COMM_WORLD);
+
     long int v[n], w[n];        /* value, weight */
 
     if (rank == 0) {
         for (i = 0; i < n; i++) {
             scanf ("%ld %ld", &v[i], &w[i]);
         }
+
     }
+    MPI_Bcast(v, n,MPI_LONG,0,MPI_COMM_WORLD);
+    MPI_Bcast(w, n,MPI_LONG,0,MPI_COMM_WORLD);
 
 
     uint64_t start = GetTimeStamp ();
@@ -177,18 +183,17 @@ long int knapSack(long int C, long int w[], long int v[], int n)
   MPI_Type_get_extent( tmp, &lb, &extent );
   MPI_Type_create_resized( tmp, lb, extent, &MPI_ITEM );
   MPI_Type_commit( &MPI_ITEM );
-
+    items = (item*)malloc(n*sizeof(item));
+    for (i=0;i<n;i++)
+    {
+        items[i].value=v[i];
+        items[i].weight=w[i];
+    }
+    qsort(items, n, sizeof(item), comitemaveval); //平均价值高的排序
   if (myrank == 0){
-      items = (item*)malloc(n*sizeof(item));
-      for (i=0;i<n;i++)
-      {
-          items[i].value=v[i];
-          items[i].weight=w[i];
-      }
       long int *visited = (long int*) malloc(sizeof(long int)*(n+1));
       long int *tempvisited = (long int*)malloc(sizeof(long int)*(n+1));
       for (i=0;i<n;i++) tempvisited[i] = visited[i] = -1; //初始值为-1
-      qsort(items, n, sizeof(item), comitemaveval); //平均价值高的排序
       long int currentweight = 0;
       for (i=0;i<n && currentweight<=C;i++){
           currentweight += items[i].weight;
@@ -201,10 +206,6 @@ long int knapSack(long int C, long int w[], long int v[], int n)
       } else if(currentweight == C) {
           return res;
       }
-      long int pair[2];
-      pair[0] = n; pair[1] = C;
-      MPI_Bcast(pair, 2, MPI_LONG, root, MPI_COMM_WORLD);
-      MPI_Bcast(items, n, MPI_ITEM, root, MPI_COMM_WORLD);
       int idle = size - 1;
       flag curflag;
       visited[n] = res;
@@ -222,6 +223,7 @@ long int knapSack(long int C, long int w[], long int v[], int n)
           int comfrom = status.MPI_SOURCE;
           switch(curflag)
           {
+
               case FINDBETTER: {
                   MPI_Recv(tempvisited, n + 1, MPI_LONG, comfrom, curflag, MPI_COMM_WORLD, &status);
                   if (tempvisited[n] >= visited[n]) {
@@ -254,6 +256,7 @@ long int knapSack(long int C, long int w[], long int v[], int n)
                       MPI_Send(&curflag, 1, MPI_INT, comfrom, DONE, MPI_COMM_WORLD);
                   }
               }
+
           }
       }
       for (i=1;i<size;i++){ //给所有线程发送终止信息
@@ -262,11 +265,6 @@ long int knapSack(long int C, long int w[], long int v[], int n)
       return res;
   }
   else {
-      long int pair[2];
-      MPI_Bcast(pair, 2, MPI_LONG, 0, MPI_COMM_WORLD);
-      n = pair[0]; C = pair[1];
-      items = (item*)malloc(n*sizeof(item));
-      MPI_Bcast(items, n, MPI_ITEM, 0, MPI_COMM_WORLD);
       list_node list={NULL,0};
       MPI_Status status;
       flag curflag=true;
@@ -275,8 +273,8 @@ long int knapSack(long int C, long int w[], long int v[], int n)
       while (curflag){
           MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
           curflag = status.MPI_TAG;
+          comfrom= status.MPI_SOURCE;
           if (STARTJOB ==curflag) {
-              comfrom= status.MPI_SOURCE;
               resfromothers = (long int*)malloc(sizeof(long int)*(n+1));  //axSol[n] contains bestSol 这个结果来自0号进程的计算
               MPI_Recv(resfromothers, n+1, MPI_LONG, comfrom, curflag, MPI_COMM_WORLD, &status);//axsol为tempSol
               res = resfromothers[n]; //得 到了0号进程的结果
@@ -289,7 +287,7 @@ long int knapSack(long int C, long int w[], long int v[], int n)
                       if (low >= res)  { //结果更好时才返回
                           currresult[n] = low;
                           res = low;
-                          MPI_Send(currresult, n+1, MPI_LONG, root, FINDBETTER, MPI_COMM_WORLD); //problem
+                          MPI_Send(currresult, n+1, MPI_LONG, root, FINDBETTER, MPI_COMM_WORLD);
                           //发回0线程
                       }
                       if (low != high){ //如果两个不相等
