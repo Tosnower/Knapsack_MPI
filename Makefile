@@ -27,3 +27,6 @@ comr:
 		cat ramdomtest.txt | mpirun -n 6 ./knapsack_dp_mpi
 		cat ramdomtest.txt | mpirun -n 6 ./knapsack_pruning_mpi
 		rm ramdomtest.txt
+final:
+		mpicc tosnower-knapsack_finalv1.c -o knapsack_finalv
+		./generator 500 6 | mpirun -n 6 ./knapsack_finalv
