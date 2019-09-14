@@ -327,6 +327,7 @@ long int pruning(long int C, long int w[], long int v[], int n)
 
 
 long int dp(long int C, long int w[], long int v[], int n) {
+    ++C;
     int size, rank;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
