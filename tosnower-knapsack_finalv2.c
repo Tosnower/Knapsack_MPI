@@ -55,10 +55,12 @@ int main(int argc, char *argv[]) {
 #include<string.h>
 #include<stdlib.h>
 #include <stddef.h>
-#include <math.h>
 #define true 1
 #define false 0
 
+//long int knapSack(long int C, long int w[], long int v[], int n) {
+//    
+//}
 typedef enum {
     END, STARTJOB, FINDBETTER, FREEPRO, SENDJOB, DONE
 } flag;
@@ -174,7 +176,7 @@ long int pruning(long int C, long int w[], long int v[], int n) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int lengthofitemvalue[] = {1, 1};
     MPI_Aint itemoffest[] = {offsetof(item, value),
-                             offsetof(item, weight)};
+        offsetof(item, weight)};
     MPI_Datatype array_of_types[] = {MPI_LONG, MPI_LONG};
     MPI_Datatype tmp, MPI_ITEM;
     MPI_Type_create_struct(2, lengthofitemvalue, itemoffest, array_of_types, &tmp);
@@ -188,7 +190,7 @@ long int pruning(long int C, long int w[], long int v[], int n) {
         items[i].weight = w[i];
     }
     qsort(items, n, sizeof(item), comitemaveval); //平均价值高的排序
-
+    
     if (rank == 0) {
         long int *visited = (long int *) malloc(sizeof(long int) * (n + 1));
         long int *tempvisited = (long int *) malloc(sizeof(long int) * (n + 1));
@@ -252,7 +254,7 @@ long int pruning(long int C, long int w[], long int v[], int n) {
                         MPI_Send(&curflag, 1, MPI_INT, comfrom, DONE, MPI_COMM_WORLD);
                     }
                 }
-
+                    
             }
         }
         for (i = 1; i < size; i++) { //给所有线程发送终止信息
@@ -357,6 +359,8 @@ long int dp_mpi(long int C, long int w[], long int v[], int n) {
         }
         i+=rowSize;
     }
+    
+    
     for (; i < n; i += rowSize) {
         int blockRow = (rowSize < n-i)?rowSize:n-i;
         long int blockWeight[blockRow];
@@ -365,7 +369,9 @@ long int dp_mpi(long int C, long int w[], long int v[], int n) {
             blockWeight[j] = w[i + j];
             blockValue[j] = v[i + j];
         }
+        
         if ((i / rowSize) % size == rank) {
+
             long int tmp[blockRow + 1][C];
             for (int j = 0; j < C; j += colSize) {
                 int blockCol = (colSize<C-j)? colSize:C-j;
@@ -382,6 +388,7 @@ long int dp_mpi(long int C, long int w[], long int v[], int n) {
                         }
                     }
                 }
+
                 if (i + blockRow == n && j + blockCol == C) {
                     MPI_Send(&tmp[blockRow][C - 1], 1, MPI_LONG, 0, 0, MPI_COMM_WORLD);
                 } else if (i + blockRow != n) {
@@ -430,43 +437,53 @@ long int dp(long int C, long int w[], long int v[], int n) {
     }
     return tmp[n-1][C-1];  //最终求得最大值
 }
-
-long int bruteForce(long int C, long int w[], long int v[], int n) {
-    int i;
-    unsigned char used [n], solution [n];
-    int done = 0;
-    long int wt;
-    
-    bzero (used, sizeof (used));
-    long int max_value = 0;
-    long int weight_of_max = 0;
-    long int weight = 0;
-    long int value = 0;
-    while (!done) {
-        int carry = 1;
-        done = 1;
-        for (i = 0; i < n; i++)
-            if (!used[i]) {
-                used[i] = 1;
-                weight += w[i];
-                value += v[i];
-                done= 0;
-                break;
-            } else {
-                used[i] = 0;
-                weight -= w[i];
-                value -= v[i];
-            }
-        if (weight <= C && value > max_value) {
-            max_value = value;
-            weight_of_max = weight;
-            bcopy (used, solution, sizeof (used));
-        }
-    }
-    return max_value;
-}
+//#include <math.h>
+//long int bruteForce(long int C, long int w[], long int v[], int n) {
+//    int i;
+//    unsigned char used [n], solution [n];
+//    int done = 0;
+//    long int wt;
+//
+//    bzero (used, sizeof (used));
+//    long int max_value = 0;
+//    long int weight_of_max = 0;
+//    long int weight = 0;
+//    long int value = 0;
+//    while (!done) {
+//        int carry = 1;
+//        done = 1;
+//        for (i = 0; i < n; i++)
+//            if (!used[i]) {
+//                used[i] = 1;
+//                weight += w[i];
+//                value += v[i];
+//                done= 0;
+//                break;
+//            } else {
+//                used[i] = 0;
+//                weight -= w[i];
+//                value -= v[i];
+//            }
+//        if (weight <= C && value > max_value) {
+//            max_value = value;
+//            weight_of_max = weight;
+//            bcopy (used, solution, sizeof (used));
+//        }
+//    }
+//    return max_value;
+//}
 
 long int knapSack(long int C, long int w[], long int v[], int n) {
+    if (n*C<500000) {
+        return dp(C,w,v,n);
+    }else if (n*C<4500000) {
+        if (1<<n > n*C) {
+            return dp_mpi(C,w,v,n);
+        }
+        else {
+            return pruning(C,w,v,n);
+        }
+    }
 //    if (n<31) {
 //        if ((1<<n) > n*C) {
 //            return dp(C,w,v,n);
@@ -475,7 +492,7 @@ long int knapSack(long int C, long int w[], long int v[], int n) {
 //        }
 //    }
 //    else {
-        return dp(C,w,v,n);
+//        return pruning(C,w,v,n);
 //    }
 }
 /* mpicc tosnower-knapsack.c -lm -o tosnower-knapsack */
