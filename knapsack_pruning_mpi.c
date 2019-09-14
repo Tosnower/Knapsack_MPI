@@ -308,6 +308,7 @@ long int knapSack(long int C, long int w[], long int v[], int n) {
                                     MPI_Bsend(sp, n + 1, MPI_LONG, givenewjob[i], STARTJOB, MPI_COMM_WORLD);
                                 }
                             }
+                            //free(currresult);
                             free(givenewjob);
                         }
                     }

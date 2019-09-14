@@ -1,6 +1,6 @@
 project(simple_example)
 cmake_minimum_required(VERSION 3.14)
-set(SOURCE_FILES knap_MPI.c)
+set(SOURCE_FILES knap_MPI.c testfunction.c testfunction.h)
 set(CMAKE_C_COMPILER mpicc)
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})

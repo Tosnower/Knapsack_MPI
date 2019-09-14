@@ -1,0 +1,8 @@
+//
+// Created by wangyang on 2019-09-14.
+//
+
+#ifndef SIMPLE_EXAMPLE_TESTFUNCTION_H
+#define SIMPLE_EXAMPLE_TESTFUNCTION_H
+
+#endif //SIMPLE_EXAMPLE_TESTFUNCTION_H
