@@ -166,7 +166,7 @@ int comitemaveval(const void *itema, const void *itemb) {
     return avval1 > avval2 ? -1 : 1;
 }
 
-long int knapSack(long int C, long int w[], long int v[], int n) {
+long int pruning(long int C, long int w[], long int v[], int n) {
     int rank, size, i, root = 0;
     long int res = 0;
     item *items;
@@ -475,7 +475,7 @@ long int knapSack(long int C, long int w[], long int v[], int n) {
 //        }
 //    }
 //    else {
-        return bruteForce(C,w,v,n);
+        return dp(C,w,v,n);
 //    }
 }
 /* mpicc tosnower-knapsack.c -lm -o tosnower-knapsack */
